@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Layout from '../../../components/Layout';
 
 const WORDPRESS_API_URL = 'https://public-api.wordpress.com/wp/v2/sites/xtianaguilar79-hbsty.wordpress.com';
+
 const categories = {
   nacionales: 170094,
   sanjuan: 67720,
@@ -12,9 +13,108 @@ const categories = {
   internacionales: 17119
 };
 
-// ... (incluye cleanText, forceHttps, processPost, getCategoryName, getCategoryLabel igual que antes)
+const cleanText = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&#8211;/g, '-')
+    .replace(/&#8212;/g, '--')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
-export default function NoticiaPage({ noticia, relatedNews, currentDate }) {
+const forceHttps = (url) => {
+  if (!url) return '/logo.png';
+  return url.replace(/^http:/, 'https:');
+};
+
+const processPost = (post, categoryKey) => {
+  let processedContent = post.content?.rendered || '';
+  processedContent = cleanText(processedContent);
+  
+  let firstContentImage = null;
+  const contentImages = processedContent.match(/<img[^>]+src="([^">]+)"/);
+  if (contentImages && contentImages.length > 0) {
+    const srcMatch = contentImages[0].match(/src="([^">]+)"/);
+    if (srcMatch && srcMatch[1]) {
+      firstContentImage = forceHttps(srcMatch[1]);
+    }
+  }
+
+  let imageUrl = '/logo.png';
+  if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
+    imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
+  } else if (firstContentImage) {
+    imageUrl = firstContentImage;
+  }
+
+  let source = 'Fuente: WordPress';
+  const sourceMatch = processedContent.match(/Fuente:\s*([^<]+)/i);
+  if (sourceMatch && sourceMatch[1]) {
+    source = `Fuente: ${sourceMatch[1].trim()}`;
+  }
+
+  const postDate = new Date(post.date);
+  const options = { day: 'numeric', month: 'long', year: 'numeric' };
+  const formattedDate = postDate.toLocaleDateString('es-ES', options).replace(' de ', ' de ');
+  
+  let excerpt = post.excerpt?.rendered || '';
+  excerpt = cleanText(excerpt.replace(/<[^>]*>/g, '').trim());
+  if (excerpt.length > 150) excerpt = excerpt.substring(0, 150) + '...';
+  else if (excerpt.length === 0 && processedContent) {
+    const cleanContent = processedContent.replace(/<[^>]*>/g, '').trim();
+    excerpt = cleanContent.substring(0, 150) + '...';
+  }
+  
+  let title = cleanText(post.title?.rendered || 'Sin título');
+  
+  return {
+    id: post.slug,
+    title,
+    subtitle: excerpt,
+    image: imageUrl,
+    categoryKey,
+    categoryColor: categoryKey === 'nacionales' ? 'bg-blue-600' : 
+                  categoryKey === 'sanjuan' ? 'bg-red-500' : 
+                  categoryKey === 'sindicales' ? 'bg-green-600' : 
+                  categoryKey === 'internacionales' ? 'bg-yellow-600' : 'bg-purple-600',
+    content: processedContent,
+    source,
+    date: formattedDate,
+    originalDate: post.date
+  };
+};
+
+const getCategoryName = (categoryKey) => {
+  switch(categoryKey) {
+    case 'nacionales': return 'Noticias Nacionales';
+    case 'sanjuan': return 'Noticias de San Juan';
+    case 'sindicales': return 'Noticias Sindicales';
+    case 'internacionales': return 'Noticias Internacionales';
+    case 'opinion': return 'Columna de Opinión';
+    default: return 'Noticia';
+  }
+};
+
+const getCategoryLabel = (categoryKey) => {
+  switch(categoryKey) {
+    case 'nacionales': return 'NACIONAL';
+    case 'sanjuan': return 'SAN JUAN';
+    case 'sindicales': return 'SINDICAL';
+    case 'internacionales': return 'INTERNACIONAL';
+    case 'opinion': return 'OPINIÓN';
+    default: return 'NOTICIA';
+  }
+};
+
+export default function NoticiaPage({ noticia, currentDate }) {
   const router = useRouter();
   const { cat, id } = router.query;
   const basePath = router.basePath || '';
@@ -55,7 +155,7 @@ export default function NoticiaPage({ noticia, relatedNews, currentDate }) {
         <meta property="og:title" content={noticia.title} />
         <meta property="og:description" content={noticia.subtitle} />
         <meta property="og:image" content={noticia.image} />
-        <meta property="og:url" content={`${basePath}/noticia/${cat}/${id}`} />
+        <meta property="og:url" content={`https://ug-noticias-mineras.vercel.app/noticia/${cat}/${id}`} />
         <meta property="og:type" content="article" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={noticia.title} />
@@ -164,28 +264,9 @@ export async function getServerSideProps({ params }) {
     if (posts.length === 0) return { notFound: true };
     const noticia = processPost(posts[0], cat);
 
-    const relatedResponse = await fetch(
-      `${WORDPRESS_API_URL}/posts?categories=${categoryId}&per_page=10&orderby=date&order=desc&_embed`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://ug-noticias-mineras.vercel.app)',
-          'Accept': 'application/json'
-        }
-      }
-    );
-    let relatedNews = [];
-    if (relatedResponse.ok) {
-      const relatedPosts = await relatedResponse.json();
-      relatedNews = relatedPosts
-        .filter(p => p.slug !== id)
-        .map(p => processPost(p, cat))
-        .slice(0, 3);
-    }
-
     return {
       props: {
         noticia,
-        relatedNews,
         currentDate: new Date().toISOString()
       }
     };
@@ -193,105 +274,3 @@ export async function getServerSideProps({ params }) {
     return { notFound: true };
   }
 }
-
-// Funciones auxiliares (cleanText, forceHttps, processPost, etc.)
-const cleanText = (text) => {
-  if (!text) return text;
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8220;/g, '"')
-    .replace(/&#8221;/g, '"')
-    .replace(/&#8211;/g, '-')
-    .replace(/&#8212;/g, '--')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-const forceHttps = (url) => {
-  if (!url) return '/logo.png';
-  return url.replace(/^http:/, 'https:');
-};
-
-const processPost = (post, categoryKey) => {
-  let processedContent = post.content?.rendered || '';
-  processedContent = cleanText(processedContent);
-  
-  let firstContentImage = null;
-  const contentImages = processedContent.match(/<img[^>]+src="([^">]+)"/g);
-  if (contentImages && contentImages.length > 0) {
-    const srcMatch = contentImages[0].match(/src="([^">]+)"/);
-    if (srcMatch && srcMatch[1]) {
-      firstContentImage = forceHttps(srcMatch[1]);
-    }
-  }
-
-  let imageUrl = '/logo.png';
-  if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
-    imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
-  } else if (firstContentImage) {
-    imageUrl = firstContentImage;
-  }
-
-  let source = 'Fuente: WordPress';
-  const sourceMatch = processedContent.match(/Fuente:\s*([^<]+)/i);
-  if (sourceMatch && sourceMatch[1]) {
-    source = `Fuente: ${sourceMatch[1].trim()}`;
-  }
-
-  const postDate = new Date(post.date);
-  const options = { day: 'numeric', month: 'long', year: 'numeric' };
-  const formattedDate = postDate.toLocaleDateString('es-ES', options).replace(' de ', ' de ');
-  
-  let excerpt = post.excerpt?.rendered || '';
-  excerpt = cleanText(excerpt.replace(/<[^>]*>/g, '').trim());
-  if (excerpt.length > 150) excerpt = excerpt.substring(0, 150) + '...';
-  else if (excerpt.length === 0 && processedContent) {
-    const cleanContent = processedContent.replace(/<[^>]*>/g, '').trim();
-    excerpt = cleanContent.substring(0, 150) + '...';
-  }
-  
-  let title = cleanText(post.title?.rendered || 'Sin título');
-  
-  return {
-    id: post.slug || post.id,
-    title,
-    subtitle: excerpt,
-    image: imageUrl,
-    categoryKey,
-    categoryColor: categoryKey === 'nacionales' ? 'bg-blue-600' : 
-                  categoryKey === 'sanjuan' ? 'bg-red-500' : 
-                  categoryKey === 'sindicales' ? 'bg-green-600' : 
-                  categoryKey === 'internacionales' ? 'bg-yellow-600' : 'bg-purple-600',
-    content: processedContent,
-    source,
-    date: formattedDate,
-    originalDate: post.date
-  };
-};
-
-const getCategoryName = (categoryKey) => {
-  switch(categoryKey) {
-    case 'nacionales': return 'Noticias Nacionales';
-    case 'sanjuan': return 'Noticias de San Juan';
-    case 'sindicales': return 'Noticias Sindicales';
-    case 'internacionales': return 'Noticias Internacionales';
-    case 'opinion': return 'Columna de Opinión';
-    default: return 'Noticia';
-  }
-};
-
-const getCategoryLabel = (categoryKey) => {
-  switch(categoryKey) {
-    case 'nacionales': return 'NACIONAL';
-    case 'sanjuan': return 'SAN JUAN';
-    case 'sindicales': return 'SINDICAL';
-    case 'internacionales': return 'INTERNACIONAL';
-    case 'opinion': return 'OPINIÓN';
-    default: return 'NOTICIA';
-  }
-};
