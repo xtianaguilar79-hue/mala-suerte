@@ -1,6 +1,7 @@
 // pages/noticia/[cat]/[id].js
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import Layout from '../../../components/Layout';
 
 const WORDPRESS_API_URL = 'https://public-api.wordpress.com/wp/v2/sites/xtianaguilar79-hbsty.wordpress.com';
@@ -114,7 +115,40 @@ const getCategoryLabel = (categoryKey) => {
   }
 };
 
-export default function NoticiaPage({ noticia, currentDate }) {
+const renderRelatedCard = ({ news, basePath }) => {
+  return (
+    <Link key={news.id} href={`/noticia/${news.categoryKey}/${news.id}`} legacyBehavior>
+      <a className="block bg-gradient-to-br from-blue-50 to-white rounded-lg shadow hover:shadow-md transition-shadow border border-blue-100 overflow-hidden">
+        <div className="flex flex-col sm:flex-row">
+          <div className="sm:w-1/3 h-24 sm:h-full relative">
+            <img 
+              src={news.image} 
+              alt={news.title} 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentNode.innerHTML = `
+                  <div class="w-full h-full bg-gradient-to-br from-blue-300 to-blue-400 flex items-center justify-center">
+                    <span class="text-blue-800 font-bold text-xs text-center px-2">${news.title}</span>
+                  </div>
+                `;
+              }}
+            />
+            <div className={`absolute top-1 left-1 ${news.categoryColor} text-white px-1.5 py-0.5 rounded text-[10px] font-semibold`}>
+              {getCategoryLabel(news.categoryKey)}
+            </div>
+          </div>
+          <div className="sm:w-2/3 p-3">
+            <h4 className="font-bold text-blue-900 text-sm leading-tight">{news.title}</h4>
+            <p className="text-gray-600 text-xs mt-1">{news.date}</p>
+          </div>
+        </div>
+      </a>
+    </Link>
+  );
+};
+
+export default function NoticiaPage({ noticia, relatedNews, currentDate }) {
   const router = useRouter();
   const { cat, id } = router.query;
   const basePath = router.basePath || '';
@@ -234,6 +268,16 @@ export default function NoticiaPage({ noticia, currentDate }) {
                 </div>
               </div>
             </div>
+
+            {/* Sección de Noticias Relacionadas */}
+            {relatedNews && relatedNews.length > 0 && (
+              <div className="mt-10 pt-6 border-t border-blue-200">
+                <h3 className="text-xl font-bold text-blue-900 mb-4">Noticias Relacionadas</h3>
+                <div className="space-y-4">
+                  {relatedNews.map(news => renderRelatedCard({ news, basePath }))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Layout>
@@ -250,6 +294,7 @@ export async function getServerSideProps({ params }) {
   }
 
   try {
+    // Obtener la noticia principal
     const response = await fetch(
       `${WORDPRESS_API_URL}/posts?slug=${id}&_embed`,
       {
@@ -264,9 +309,29 @@ export async function getServerSideProps({ params }) {
     if (posts.length === 0) return { notFound: true };
     const noticia = processPost(posts[0], cat);
 
+    // Obtener noticias relacionadas (máximo 3, excluyendo la actual)
+    const relatedResponse = await fetch(
+      `${WORDPRESS_API_URL}/posts?categories=${categoryId}&per_page=10&orderby=date&order=desc&_embed`,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://ug-noticias-mineras.vercel.app)',
+          'Accept': 'application/json'
+        }
+      }
+    );
+    let relatedNews = [];
+    if (relatedResponse.ok) {
+      const relatedPosts = await relatedResponse.json();
+      relatedNews = relatedPosts
+        .filter(p => p.slug !== id) // excluye la noticia actual
+        .map(p => processPost(p, cat))
+        .slice(0, 3); // máximo 3
+    }
+
     return {
       props: {
         noticia,
+        relatedNews,
         currentDate: new Date().toISOString()
       }
     };
