@@ -36,6 +36,20 @@ const forceHttps = (url) => {
   return url.replace(/^http:/, 'https:');
 };
 
+const processPostForSidebar = (post, categoryKey) => {
+  let title = cleanText(post.title?.rendered || 'Sin título');
+  let imageUrl = '/logo.png';
+  if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
+    imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
+  }
+  return {
+    id: post.slug,
+    title,
+    image: imageUrl,
+    categoryKey
+  };
+};
+
 const processPosts = (posts, categoryKey) => {
   return posts.map(post => {
     let processedContent = post.content?.rendered || '';
@@ -78,7 +92,7 @@ const processPosts = (posts, categoryKey) => {
     let title = cleanText(post.title?.rendered || 'Sin título');
 
     return {
-      id: post.slug, // ← USAMOS EL SLUG COMO ID
+      id: post.slug,
       title,
       subtitle: excerpt,
       image: imageUrl,
@@ -208,7 +222,39 @@ const renderNewsCard = ({ news, basePath }) => {
   );
 };
 
-export default function CategoryPage({ newsList, cat, currentDate }) {
+const renderSidebarCategoryCard = ({ categoryKey, latestNews }) => {
+  return (
+    <div key={categoryKey} className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden mb-4">
+      <Link href={`/noticia/${categoryKey}`} legacyBehavior>
+        <a className="block">
+          <div className="bg-gradient-to-r from-blue-900 to-blue-700 p-3 text-center">
+            <h3 className="text-lg font-bold text-white">{getCategoryName(categoryKey)}</h3>
+            <div className="w-16 h-1 bg-red-500 mx-auto mt-1"></div>
+          </div>
+          {latestNews ? (
+            <div className="p-2 h-24 bg-white flex items-center justify-center relative">
+              <img 
+                src={latestNews.image} 
+                alt={latestNews.title}
+                className="absolute inset-0 w-full h-full object-cover opacity-20"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+              <p className="text-gray-800 text-center text-sm font-medium px-1 text-balance">
+                {latestNews.title}
+              </p>
+            </div>
+          ) : (
+            <div className="p-2 h-24 bg-white flex items-center justify-center">
+              <p className="text-gray-500 text-center text-sm">Sin noticias recientes</p>
+            </div>
+          )}
+        </a>
+      </Link>
+    </div>
+  );
+};
+
+export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }) {
   const router = useRouter();
   const basePath = router.basePath || '';
   const page = parseInt(router.query.page) || 1;
@@ -298,21 +344,10 @@ export default function CategoryPage({ newsList, cat, currentDate }) {
           <div className="lg:col-span-1">
             {Object.entries(categories).map(([key, _]) => {
               if (key === cat) return null;
-              return (
-                <div key={key} className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden mb-4">
-                  <Link href={`/noticia/${key}`} legacyBehavior>
-                    <a className="block">
-                      <div className="bg-gradient-to-r from-blue-900 to-blue-700 p-3 text-center">
-                        <h3 className="text-lg font-bold text-white">{getCategoryName(key)}</h3>
-                        <div className="w-16 h-1 bg-red-500 mx-auto mt-1"></div>
-                      </div>
-                      <div className="p-3 h-24 bg-white flex items-center justify-center">
-                        <p className="text-gray-500 text-center text-sm">Ver noticias</p>
-                      </div>
-                    </a>
-                  </Link>
-                </div>
-              );
+              return renderSidebarCategoryCard({
+                categoryKey: key,
+                latestNews: sidebarNews[key]
+              });
             })}
             <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
               <div className="p-3 space-y-3">
@@ -342,7 +377,8 @@ export async function getServerSideProps({ params }) {
   }
 
   try {
-    const response = await fetch(
+    // Cargar noticias de la categoría actual
+    const mainResponse = await fetch(
       `${WORDPRESS_API_URL}/posts?categories=${categoryId}&per_page=100&orderby=date&order=desc&_embed`,
       {
         headers: {
@@ -352,23 +388,42 @@ export async function getServerSideProps({ params }) {
       }
     );
 
-    if (!response.ok) {
-      return {
-        props: {
-          newsList: [],
-          cat,
-          currentDate: new Date().toISOString()
-        }
-      };
+    let newsList = [];
+    if (mainResponse.ok) {
+      const posts = await mainResponse.json();
+      newsList = processPosts(posts, cat);
     }
 
-    const posts = await response.json();
-    const newsList = processPosts(posts, cat);
+    // Cargar la última noticia de cada categoría para el sidebar
+    const sidebarNews = {};
+    for (const [key, id] of Object.entries(categories)) {
+      if (key === cat) continue; // no cargar la actual
+      try {
+        const res = await fetch(
+          `${WORDPRESS_API_URL}/posts?categories=${id}&per_page=1&orderby=date&order=desc&_embed`,
+          {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://ug-noticias-mineras.vercel.app)',
+              'Accept': 'application/json'
+            }
+          }
+        );
+        if (res.ok) {
+          const posts = await res.json();
+          if (posts.length > 0) {
+            sidebarNews[key] = processPostForSidebar(posts[0], key);
+          }
+        }
+      } catch (e) {
+        // Silently fail for sidebar
+      }
+    }
 
     return {
       props: {
         newsList,
         cat,
+        sidebarNews,
         currentDate: new Date().toISOString()
       }
     };
@@ -377,6 +432,7 @@ export async function getServerSideProps({ params }) {
       props: {
         newsList: [],
         cat,
+        sidebarNews: {},
         currentDate: new Date().toISOString()
       }
     };
