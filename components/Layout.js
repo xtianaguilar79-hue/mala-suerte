@@ -45,16 +45,60 @@ export default function Layout({ children, currentDate }) {
     setIsSearchOpen(false);
   };
 
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <>
+      {/* MOBILE MENU FIJO (siempre visible cuando está abierto) */}
+      {mobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-blue-800 shadow-lg"
+          style={{ paddingTop: '64px' }} // altura del header
+        >
+          <div className="max-w-7xl mx-auto px-4 py-2">
+            <nav className="flex flex-col space-y-2">
+              <Link href="/" legacyBehavior>
+                <a 
+                  className={`px-4 py-1 text-sm ${activeCategory === 'home' ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900'} text-white font-semibold rounded-full transition-all duration-300`}
+                  onClick={closeMobileMenu}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
+                    <span>Inicio</span>
+                  </div>
+                </a>
+              </Link>
+              {['sanjuan', 'nacionales', 'internacionales', 'sindicales', 'opinion'].map(cat => (
+                <Link key={cat} href={`/noticia/${cat}`} legacyBehavior>
+                  <a 
+                    className={`px-4 py-1 text-sm ${activeCategory === cat ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900'} text-white font-semibold rounded-full transition-all duration-300`}
+                    onClick={closeMobileMenu}
+                  >
+                    {cat === 'nacionales' ? 'Nacionales' :
+                     cat === 'sanjuan' ? 'San Juan' :
+                     cat === 'sindicales' ? 'Sindicales' :
+                     cat === 'internacionales' ? 'Internacionales' : 'Opinión'}
+                  </a>
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
-      <header className="bg-white border-b-4 border-blue-800 shadow-lg header-custom overflow-hidden sticky-header">
+      <header className="bg-white border-b-4 border-blue-800 shadow-lg header-custom overflow-hidden sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center">
           <div className="flex justify-between items-center py-1 w-full">
             <div className="flex items-center space-x-4">
               <button 
                 className="lg:hidden text-blue-900 hover:text-blue-700 transition-colors"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Menú"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -167,38 +211,8 @@ export default function Layout({ children, currentDate }) {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b-2 border-blue-800 shadow-lg z-50">
-          <div className="max-w-7xl mx-auto px-4 py-2">
-            <nav className="flex flex-col space-y-2">
-              <Link href="/" legacyBehavior>
-                <a className={`px-4 py-1 text-sm ${activeCategory === 'home' ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900'} text-white font-semibold rounded-full transition-all duration-300`}>
-                  <div className="flex items-center space-x-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                    </svg>
-                    <span>Inicio</span>
-                  </div>
-                </a>
-              </Link>
-              {['sanjuan', 'nacionales', 'internacionales', 'sindicales', 'opinion'].map(cat => (
-                <Link key={cat} href={`/noticia/${cat}`} legacyBehavior>
-                  <a className={`px-4 py-1 text-sm ${activeCategory === cat ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900'} text-white font-semibold rounded-full transition-all duration-300`}>
-                    {cat === 'nacionales' ? 'Nacionales' :
-                     cat === 'sanjuan' ? 'San Juan' :
-                     cat === 'sindicales' ? 'Sindicales' :
-                     cat === 'internacionales' ? 'Internacionales' : 'Opinión'}
-                  </a>
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
-      )}
-
       {/* CONTENIDO PRINCIPAL */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 content-with-sticky-header">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </div>
 
