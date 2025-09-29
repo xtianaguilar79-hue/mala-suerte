@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 
 const WORDPRESS_API_URL = 'https://public-api.wordpress.com/wp/v2/sites/xtianaguilar79-hbsty.wordpress.com';
+
 const categories = {
   nacionales: 170094,
   sanjuan: 67720,
@@ -13,7 +14,107 @@ const categories = {
   internacionales: 17119
 };
 
-// ... (incluye cleanText, forceHttps, processPosts, getCategoryName, getCategoryLabel igual que antes)
+const cleanText = (text) => {
+  if (!text) return text;
+  return text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&#8211;/g, '-')
+    .replace(/&#8212;/g, '--')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const forceHttps = (url) => {
+  if (!url) return '/logo.png';
+  return url.replace(/^http:/, 'https:');
+};
+
+const processPosts = (posts, categoryKey) => {
+  return posts.map(post => {
+    let processedContent = post.content?.rendered || '';
+    processedContent = cleanText(processedContent);
+
+    let firstContentImage = null;
+    const contentImages = processedContent.match(/<img[^>]+src="([^">]+)"/);
+    if (contentImages && contentImages.length > 0) {
+      const srcMatch = contentImages[0].match(/src="([^">]+)"/);
+      if (srcMatch && srcMatch[1]) {
+        firstContentImage = forceHttps(srcMatch[1]);
+      }
+    }
+
+    let imageUrl = '/logo.png';
+    if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
+      imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
+    } else if (firstContentImage) {
+      imageUrl = firstContentImage;
+    }
+
+    let source = 'Fuente: WordPress';
+    const sourceMatch = processedContent.match(/Fuente:\s*([^<]+)/i);
+    if (sourceMatch && sourceMatch[1]) {
+      source = `Fuente: ${sourceMatch[1].trim()}`;
+    }
+
+    const postDate = new Date(post.date);
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    const formattedDate = postDate.toLocaleDateString('es-ES', options).replace(' de ', ' de ');
+
+    let excerpt = post.excerpt?.rendered || '';
+    excerpt = cleanText(excerpt.replace(/<[^>]*>/g, '').trim());
+    if (excerpt.length > 150) excerpt = excerpt.substring(0, 150) + '...';
+    else if (excerpt.length === 0 && processedContent) {
+      const cleanContent = processedContent.replace(/<[^>]*>/g, '').trim();
+      excerpt = cleanContent.substring(0, 150) + '...';
+    }
+
+    let title = cleanText(post.title?.rendered || 'Sin título');
+
+    return {
+      id: post.slug, // ← USAMOS EL SLUG COMO ID
+      title,
+      subtitle: excerpt,
+      image: imageUrl,
+      categoryKey,
+      categoryColor: categoryKey === 'nacionales' ? 'bg-blue-600' : 
+                    categoryKey === 'sanjuan' ? 'bg-red-500' : 
+                    categoryKey === 'sindicales' ? 'bg-green-600' : 
+                    categoryKey === 'internacionales' ? 'bg-yellow-600' : 'bg-purple-600',
+      source,
+      date: formattedDate,
+      originalDate: post.date
+    };
+  });
+};
+
+const getCategoryName = (categoryKey) => {
+  switch(categoryKey) {
+    case 'nacionales': return 'Noticias Nacionales';
+    case 'sanjuan': return 'Noticias de San Juan';
+    case 'sindicales': return 'Noticias Sindicales';
+    case 'internacionales': return 'Noticias Internacionales';
+    case 'opinion': return 'Columna de Opinión';
+    default: return 'Noticia';
+  }
+};
+
+const getCategoryLabel = (categoryKey) => {
+  switch(categoryKey) {
+    case 'nacionales': return 'NACIONAL';
+    case 'sanjuan': return 'SAN JUAN';
+    case 'sindicales': return 'SINDICAL';
+    case 'internacionales': return 'INTERNACIONAL';
+    case 'opinion': return 'OPINIÓN';
+    default: return 'NOTICIA';
+  }
+};
 
 const shareOnWhatsApp = (news, basePath) => {
   const url = encodeURIComponent(`${basePath}/noticia/${news.categoryKey}/${news.id}`);
