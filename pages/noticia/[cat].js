@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 
+const SITE_URL = 'https://ug-noticias-mineras.vercel.app';
 const WORDPRESS_API_URL = 'https://public-api.wordpress.com/wp/v2/sites/xtianaguilar79-hbsty.wordpress.com';
 
 const categories = {
@@ -32,13 +33,13 @@ const cleanText = (text) => {
 };
 
 const forceHttps = (url) => {
-  if (!url) return '/logo.png';
+  if (!url) return `${SITE_URL}/logo.png`;
   return url.replace(/^http:/, 'https:');
 };
 
 const processPostForSidebar = (post, categoryKey) => {
   let title = cleanText(post.title?.rendered || 'Sin título');
-  let imageUrl = '/logo.png';
+  let imageUrl = `${SITE_URL}/logo.png`;
   if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
     imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
   }
@@ -64,7 +65,7 @@ const processPosts = (posts, categoryKey) => {
       }
     }
 
-    let imageUrl = '/logo.png';
+    let imageUrl = `${SITE_URL}/logo.png`;
     if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
       imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
     } else if (firstContentImage) {
@@ -131,18 +132,18 @@ const getCategoryLabel = (categoryKey) => {
 };
 
 const shareOnWhatsApp = (news, basePath) => {
-  const url = encodeURIComponent(`${basePath}/noticia/${news.categoryKey}/${news.id}`);
+  const url = encodeURIComponent(`${SITE_URL}/noticia/${news.categoryKey}/${news.id}`);
   const title = encodeURIComponent(news.title);
   window.open(`https://wa.me/?text=${title}%20${url}`, '_blank');
 };
 
 const shareOnFacebook = (news, basePath) => {
-  const url = encodeURIComponent(`${basePath}/noticia/${news.categoryKey}/${news.id}`);
+  const url = encodeURIComponent(`${SITE_URL}/noticia/${news.categoryKey}/${news.id}`);
   window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
 };
 
 const shareOnLinkedIn = (news, basePath) => {
-  const url = encodeURIComponent(`${basePath}/noticia/${news.categoryKey}/${news.id}`);
+  const url = encodeURIComponent(`${SITE_URL}/noticia/${news.categoryKey}/${news.id}`);
   const title = encodeURIComponent(news.title);
   window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}`, '_blank', 'width=600,height=400');
 };
@@ -263,12 +264,15 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
   const paginatedNews = newsList.slice(startIndex, startIndex + pageSize);
   const totalPages = Math.ceil(newsList.length / pageSize);
 
+  const categoryName = getCategoryName(cat);
+  const ogImageUrl = `${SITE_URL}/logo.png`;
+
   if (!newsList || newsList.length === 0) {
     return (
       <Layout currentDate={currentDate}>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center max-w-2xl mx-auto mt-12">
           <h3 className="text-yellow-800 font-bold text-xl mb-2">No hay noticias en esta categoría</h3>
-          <p className="text-yellow-700 mb-6">No se encontraron noticias para "{getCategoryName(cat)}".</p>
+          <p className="text-yellow-700 mb-6">No se encontraron noticias para "{categoryName}".</p>
         </div>
       </Layout>
     );
@@ -277,14 +281,23 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
   return (
     <>
       <Head>
-        <title>{getCategoryName(cat)} - UG Noticias Mineras</title>
-        <meta name="description" content={`Noticias de ${getCategoryName(cat).toLowerCase()}.`} />
-        <meta property="og:title" content={`${getCategoryName(cat)} - UG Noticias Mineras`} />
-        <meta property="og:description" content={`Noticias de ${getCategoryName(cat).toLowerCase()}.`} />
-        <meta property="og:image" content="/logo.png" />
-        <meta property="og:url" content={`https://ug-noticias-mineras.vercel.app/noticia/${cat}`} />
+        <title>{categoryName} - UG Noticias Mineras</title>
+        <meta name="description" content={`Noticias de ${categoryName.toLowerCase()}.`} />
+        {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${SITE_URL}/noticia/${cat}`} />
+        <meta property="og:title" content={`${categoryName} - UG Noticias Mineras`} />
+        <meta property="og:description" content={`Noticias de ${categoryName.toLowerCase()}.`} />
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="UG Noticias Mineras" />
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${categoryName} - UG Noticias Mineras`} />
+        <meta name="twitter:description" content={`Noticias de ${categoryName.toLowerCase()}.`} />
+        <meta name="twitter:image" content={ogImageUrl} />
+        <meta name="twitter:site" content="@ugnoticiasmin" />
       </Head>
 
       <Layout currentDate={currentDate}>
@@ -292,7 +305,7 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
           <div className="lg:col-span-4">
             <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-900 to-blue-700 p-6">
-                <h2 className="text-2xl font-bold text-white">{getCategoryName(cat)}</h2>
+                <h2 className="text-2xl font-bold text-white">{categoryName}</h2>
                 <div className="w-24 h-1 bg-red-500 mt-2"></div>
               </div>
               <div className="p-6">
@@ -377,7 +390,6 @@ export async function getServerSideProps({ params }) {
   }
 
   try {
-    // Cargar noticias de la categoría actual
     const mainResponse = await fetch(
       `${WORDPRESS_API_URL}/posts?categories=${categoryId}&per_page=100&orderby=date&order=desc&_embed`,
       {
@@ -394,10 +406,9 @@ export async function getServerSideProps({ params }) {
       newsList = processPosts(posts, cat);
     }
 
-    // Cargar la última noticia de cada categoría para el sidebar
     const sidebarNews = {};
     for (const [key, id] of Object.entries(categories)) {
-      if (key === cat) continue; // no cargar la actual
+      if (key === cat) continue;
       try {
         const res = await fetch(
           `${WORDPRESS_API_URL}/posts?categories=${id}&per_page=1&orderby=date&order=desc&_embed`,
@@ -415,7 +426,7 @@ export async function getServerSideProps({ params }) {
           }
         }
       } catch (e) {
-        // Silently fail for sidebar
+        // Silently fail
       }
     }
 
