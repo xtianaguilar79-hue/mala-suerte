@@ -206,7 +206,10 @@ export default function NoticiaPage({ noticia, relatedNews, currentDate }) {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}`, '_blank', 'width=600,height=400');
   };
 
-  const ogImageUrl = noticia.image || `${SITE_URL}/logo.png`;
+  // ✅ Usa la imagen de la noticia SI está disponible, de lo contrario usa el logo
+  const ogImageUrl = noticia.image && noticia.image.startsWith('http') 
+    ? noticia.image 
+    : `${SITE_URL}/logo.png`;
 
   return (
     <>
@@ -314,7 +317,6 @@ export default function NoticiaPage({ noticia, relatedNews, currentDate }) {
             </div>
           </div>
 
-          {/* Sidebar en escritorio */}
           <div className="lg:col-span-1 hidden lg:block">
             {Object.entries(categories).map(([key, _]) => {
               if (key === cat) return null;
