@@ -118,7 +118,7 @@ export default function Layout({ children, currentDate }) {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header con botón de modo oscuro */}
       <header className="bg-white dark:bg-gray-900 border-b-4 border-blue-800 shadow-lg sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -138,10 +138,11 @@ export default function Layout({ children, currentDate }) {
             </Link>
           </div>
           <div className="flex items-center space-x-3">
+            {/* ✅ BOTÓN DE MODO OSCURO VISIBLE EN TODOS LOS DISPOSITIVOS */}
             <button 
               onClick={toggleDarkMode}
-              className="text-blue-900 dark:text-blue-200 hover:text-blue-700 dark:hover:text-blue-300"
-              aria-label={darkMode ? "Modo claro" : "Modo oscuro"}
+              className="text-blue-900 dark:text-blue-200 hover:text-blue-700 dark:hover:text-blue-300 p-1"
+              aria-label={darkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
             >
               {darkMode ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -233,12 +234,11 @@ export default function Layout({ children, currentDate }) {
         </div>
       </div>
 
-      {/* Contenido principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </div>
 
-      {/* ✅ FOOTER COMPLETO RESTAURADO */}
+      {/* Footer completo */}
       <footer className="bg-gradient-to-r from-blue-900 to-blue-800 text-white mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row justify-between items-center">
