@@ -4,7 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Layout from '../../../components/Layout';
 
-const SITE_URL = 'https://ug-noticias-mineras.vercel.app';
+const SITE_URL = 'https://mala-suerte-170a2g60o-xtian-aguilar-79s-projects.vercel.app';
 const WORDPRESS_API_URL = 'https://public-api.wordpress.com/wp/v2/sites/xtianaguilar79-hbsty.wordpress.com';
 
 const categories = {
@@ -13,6 +13,17 @@ const categories = {
   sindicales: 3865306,
   opinion: 352,
   internacionales: 17119
+};
+
+// ✅ Normaliza el slug: elimina acentos y caracteres especiales
+const normalizeSlug = (slug) => {
+  return slug
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // elimina acentos
+    .replace(/[^a-z0-9\s-]/g, '')      // elimina caracteres no alfanuméricos
+    .replace(/\s+/g, '-')              // espacios → guiones
+    .replace(/-+/g, '-');              // múltiples guiones → uno solo
 };
 
 const cleanText = (text) => {
@@ -206,7 +217,6 @@ export default function NoticiaPage({ noticia, relatedNews, currentDate }) {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}`, '_blank', 'width=600,height=400');
   };
 
-  // ✅ Usa la imagen de la noticia SI está disponible, de lo contrario usa el logo
   const ogImageUrl = noticia.image && noticia.image.startsWith('http') 
     ? noticia.image 
     : `${SITE_URL}/logo.png`;
@@ -353,25 +363,57 @@ export async function getServerSideProps({ params }) {
   }
 
   try {
+    // ✅ Normaliza el slug para hacerlo compatible con WordPress
+    const normalizedSlug = normalizeSlug(id);
+    
+    // Busca por slug normalizado
     const response = await fetch(
-      `${WORDPRESS_API_URL}/posts?slug=${id}&_embed`,
+      `${WORDPRESS_API_URL}/posts?slug=${normalizedSlug}&_embed`,
       {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://ug-noticias-mineras.vercel.app)',
+          'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://mala-suerte-170a2g60o-xtian-aguilar-79s-projects.vercel.app)',
           'Accept': 'application/json'
         }
       }
     );
+    
     if (!response.ok) return { notFound: true };
     const posts = await response.json();
-    if (posts.length === 0) return { notFound: true };
-    const noticia = processPost(posts[0], cat);
+    
+    // Si no se encuentra, intenta con el slug original
+    let noticia = null;
+    if (posts.length > 0) {
+      noticia = processPost(posts[0], cat);
+    } else {
+      // Intento de respaldo: buscar en todas las noticias de la categoría
+      const fallbackResponse = await fetch(
+        `${WORDPRESS_API_URL}/posts?categories=${categoryId}&per_page=100&orderby=date&order=desc&_embed`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://mala-suerte-170a2g60o-xtian-aguilar-79s-projects.vercel.app)',
+            'Accept': 'application/json'
+          }
+        }
+      );
+      if (fallbackResponse.ok) {
+        const allPosts = await fallbackResponse.json();
+        const match = allPosts.find(p => normalizeSlug(p.slug) === normalizedSlug);
+        if (match) {
+          noticia = processPost(match, cat);
+        }
+      }
+    }
 
+    if (!noticia) {
+      return { notFound: true };
+    }
+
+    // Cargar noticias relacionadas
     const relatedResponse = await fetch(
       `${WORDPRESS_API_URL}/posts?categories=${categoryId}&per_page=10&orderby=date&order=desc&_embed`,
       {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://ug-noticias-mineras.vercel.app)',
+          'User-Agent': 'Mozilla/5.0 (compatible; UGNoticiasMineras/1.0; +https://mala-suerte-170a2g60o-xtian-aguilar-79s-projects.vercel.app)',
           'Accept': 'application/json'
         }
       }
@@ -380,7 +422,7 @@ export async function getServerSideProps({ params }) {
     if (relatedResponse.ok) {
       const relatedPosts = await relatedResponse.json();
       relatedNews = relatedPosts
-        .filter(p => p.slug !== id)
+        .filter(p => p.slug !== noticia.id)
         .map(p => processPost(p, cat))
         .slice(0, 3);
     }
