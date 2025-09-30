@@ -1,15 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./app/**/*.{js,ts,jsx,tsx}", // incluido por si usas App Router en el futuro
   ],
-  darkMode: 'class', // Habilita modo oscuro con clase 'dark'
+  darkMode: 'class', // Activa el modo oscuro mediante la clase 'dark' en <html>
   theme: {
     extend: {
       colors: {
-        // Puedes ajustar estos colores si lo deseas
+        // Colores personalizados (puedes ajustarlos si lo deseas)
         blue: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -37,7 +37,7 @@ module.exports = {
         marquee: 'marquee 20s linear infinite',
       },
       height: {
-        'sponsor-banner-height': '4rem', // Ajusta según necesites
+        'sponsor-banner-height': '4rem', // 64px – ajustable
       },
     },
   },
