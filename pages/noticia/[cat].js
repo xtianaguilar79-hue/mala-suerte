@@ -39,14 +39,9 @@ const forceHttps = (url) => {
 
 const processPostForSidebar = (post, categoryKey) => {
   let title = cleanText(post.title?.rendered || 'Sin título');
-  let imageUrl = `${SITE_URL}/logo.png`;
-  if (post.featured_media && post._embedded?.['wp:featuredmedia']?.[0]?.source_url) {
-    imageUrl = forceHttps(post._embedded['wp:featuredmedia'][0].source_url);
-  }
   return {
     id: post.slug,
     title,
-    image: imageUrl,
     categoryKey
   };
 };
@@ -151,7 +146,7 @@ const shareOnLinkedIn = (news, basePath) => {
 const renderNewsCard = ({ news, basePath }) => {
   return (
     <Link key={news.id} href={`/noticia/${news.categoryKey}/${news.id}`} legacyBehavior>
-      <a className="block bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-100 overflow-hidden">
+      <a className="block bg-gradient-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-blue-100 dark:border-blue-900 overflow-hidden">
         <div className="flex flex-col md:flex-row">
           <div className="md:w-1/3 h-48 md:h-full relative">
             <img 
@@ -161,8 +156,8 @@ const renderNewsCard = ({ news, basePath }) => {
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.parentNode.innerHTML = `
-                  <div class="w-full h-full bg-gradient-to-br from-blue-300 to-blue-400 flex items-center justify-center">
-                    <div class="text-blue-800 font-bold text-center p-4">${news.title}</div>
+                  <div class="w-full h-full bg-gradient-to-br from-blue-300 to-blue-400 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                    <div class="text-blue-800 dark:text-blue-200 font-bold text-center p-4">${news.title}</div>
                   </div>
                 `;
               }}
@@ -172,11 +167,11 @@ const renderNewsCard = ({ news, basePath }) => {
             </div>
           </div>
           <div className="md:w-2/3 p-6">
-            <h3 className="font-bold text-blue-900 text-xl">{news.title}</h3>
-            <p className="text-gray-600 mt-2 mb-4">{news.subtitle}</p>
-            <div className="mt-4 pt-2 border-t border-blue-100 flex justify-between items-center">
-              <p className="text-blue-800 font-medium">{news.source}</p>
-              <p className="text-gray-500 text-sm">{news.date}</p>
+            <h3 className="font-bold text-blue-900 dark:text-blue-100 text-xl">{news.title}</h3>
+            <p className="text-gray-600 dark:text-gray-300 mt-2 mb-4">{news.subtitle}</p>
+            <div className="mt-4 pt-2 border-t border-blue-100 dark:border-blue-900 flex justify-between items-center">
+              <p className="text-blue-800 dark:text-blue-200 font-medium">{news.source}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{news.date}</p>
             </div>
             <div className="mt-4 flex space-x-2">
               <button 
@@ -225,30 +220,22 @@ const renderNewsCard = ({ news, basePath }) => {
 
 const renderSidebarCategoryCard = ({ categoryKey, latestNews }) => {
   return (
-    <div key={categoryKey} className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden mb-4">
+    <div key={categoryKey} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-blue-100 dark:border-blue-900 overflow-hidden mb-4">
       <Link href={`/noticia/${categoryKey}`} legacyBehavior>
         <a className="block">
           <div className="bg-gradient-to-r from-blue-900 to-blue-700 p-3 text-center">
             <h3 className="text-lg font-bold text-white">{getCategoryName(categoryKey)}</h3>
             <div className="w-16 h-1 bg-red-500 mx-auto mt-1"></div>
           </div>
-          {latestNews ? (
-            <div className="p-2 h-24 bg-white flex items-center justify-center relative">
-              <img 
-                src={latestNews.image} 
-                alt={latestNews.title}
-                className="absolute inset-0 w-full h-full object-cover opacity-20"
-                onError={(e) => e.target.style.display = 'none'}
-              />
-              <p className="text-gray-800 text-center text-sm font-medium px-1 text-balance">
+          <div className="p-2 h-24 bg-white dark:bg-gray-800 flex items-center justify-center">
+            {latestNews ? (
+              <p className="text-gray-800 dark:text-gray-200 text-center text-sm font-medium px-1">
                 {latestNews.title}
               </p>
-            </div>
-          ) : (
-            <div className="p-2 h-24 bg-white flex items-center justify-center">
-              <p className="text-gray-500 text-center text-sm">Sin noticias recientes</p>
-            </div>
-          )}
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-center text-sm">Sin noticias recientes</p>
+            )}
+          </div>
         </a>
       </Link>
     </div>
@@ -283,7 +270,6 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
       <Head>
         <title>{categoryName} - UG Noticias Mineras</title>
         <meta name="description" content={`Noticias de ${categoryName.toLowerCase()}.`} />
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${SITE_URL}/noticia/${cat}`} />
         <meta property="og:title" content={`${categoryName} - UG Noticias Mineras`} />
@@ -292,7 +278,6 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="UG Noticias Mineras" />
-        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${categoryName} - UG Noticias Mineras`} />
         <meta name="twitter:description" content={`Noticias de ${categoryName.toLowerCase()}.`} />
@@ -303,7 +288,7 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
       <Layout currentDate={currentDate}>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-4">
-            <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
               <div className="bg-gradient-to-r from-blue-900 to-blue-700 p-6">
                 <h2 className="text-2xl font-bold text-white">{categoryName}</h2>
                 <div className="w-24 h-1 bg-red-500 mt-2"></div>
@@ -313,11 +298,11 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
                   {paginatedNews.map(news => renderNewsCard({ news, basePath }))}
                 </div>
                 {totalPages > 1 && (
-                  <div className="bg-gray-50 px-6 py-4 flex justify-center items-center space-x-2 mt-6">
+                  <div className="bg-gray-50 dark:bg-gray-900 px-6 py-4 flex justify-center items-center space-x-2 mt-6">
                     <button 
                       onClick={() => router.push(`/noticia/${cat}?page=${Math.max(1, page - 1)}`)}
                       disabled={page === 1}
-                      className={`px-4 py-2 rounded-lg ${page === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'} transition-colors`}
+                      className={`px-4 py-2 rounded-lg ${page === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'} transition-colors`}
                     >
                       Anterior
                     </button>
@@ -327,7 +312,7 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
                         <button 
                           key={pageNum}
                           onClick={() => router.push(`/noticia/${cat}?page=${pageNum}`)}
-                          className={`px-4 py-2 rounded-lg ${page === pageNum ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-100'} transition-colors`}
+                          className={`px-4 py-2 rounded-lg ${page === pageNum ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-blue-600 hover:bg-blue-100 dark:hover:bg-gray-700'} transition-colors`}
                         >
                           {pageNum}
                         </button>
@@ -337,7 +322,7 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
                     {totalPages > 5 && (
                       <button 
                         onClick={() => router.push(`/noticia/${cat}?page=${totalPages}`)}
-                        className={`px-4 py-2 rounded-lg ${page === totalPages ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-100'} transition-colors`}
+                        className={`px-4 py-2 rounded-lg ${page === totalPages ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-blue-600 hover:bg-blue-100 dark:hover:bg-gray-700'} transition-colors`}
                       >
                         {totalPages}
                       </button>
@@ -345,7 +330,7 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
                     <button 
                       onClick={() => router.push(`/noticia/${cat}?page=${Math.min(totalPages, page + 1)}`)}
                       disabled={page === totalPages}
-                      className={`px-4 py-2 rounded-lg ${page === totalPages ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'} transition-colors`}
+                      className={`px-4 py-2 rounded-lg ${page === totalPages ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'} transition-colors`}
                     >
                       Siguiente
                     </button>
@@ -362,7 +347,7 @@ export default function CategoryPage({ newsList, cat, sidebarNews, currentDate }
                 latestNews: sidebarNews[key]
               });
             })}
-            <div className="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-blue-100 dark:border-blue-900 overflow-hidden">
               <div className="p-3 space-y-3">
                 {[...Array(5)].map((_, i) => (
                   <img 
